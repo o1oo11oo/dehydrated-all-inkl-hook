@@ -88,7 +88,7 @@ function clean_challenge {
             response="$("${SCRIPTDIR}"/kasapi.sh/kasapi.sh -f "delete_dns_settings" -p "${params}" 2>&1)"
             exitval="${?}"
             if [[ "${exitval}" -eq 0 ]]; then
-                _echo "Successfully deleted DNS entry $(( ${i} + 1 ))/${#dns_entries[@]}."
+                _echo "Successfully deleted DNS entry $(( i + 1 ))/${#dns_entries[@]}."
             else
                 response="${response/ERROR: /}"
                 _exiterr "${response}" "${exitval}"
@@ -105,9 +105,9 @@ function deploy_cert {
 
     # build request parameters
     params="${params/DOMAIN/${DOMAIN}}"
-    params="${params/PRIVKEY/$(echo -n $(cat ${KEYFILE} | sed 's / \\/ g' | sed ':a;N;$!ba;s/\n/\\n/g')\\n)}"
-    params="${params/CERT/$(echo -n $(cat ${CERTFILE} | sed 's / \\/ g' | sed ':a;N;$!ba;s/\n/\\n/g')\\n)}"
-    params="${params/CHAIN/$(echo -n $(cat ${CHAINFILE} | sed 's / \\/ g' | sed ':a;N;$!ba;s/\n/\\n/g')\\n)}"
+    params="${params/PRIVKEY/$(printf "%s" "$(<"${KEYFILE}" | sed 's / \\/ g' | sed ':a;N;$!ba;s/\n/\\n/g')"\\n)}"
+    params="${params/CERT/$(printf "%s" "$(<"${CERTFILE}" | sed 's / \\/ g' | sed ':a;N;$!ba;s/\n/\\n/g')"\\n)}"
+    params="${params/CHAIN/$(printf "%s" "$(<"${CHAINFILE}" | sed 's / \\/ g' | sed ':a;N;$!ba;s/\n/\\n/g')"\\n)}"
 
     # send request
     _echo "Updating SSL certificate for ${DOMAIN}..."
@@ -122,4 +122,4 @@ function deploy_cert {
     exit "${exitval}"
 }
 
-HANDLER=$1; shift; $HANDLER $@
+HANDLER=$1; shift; $HANDLER "${@}"
