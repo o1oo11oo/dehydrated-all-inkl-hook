@@ -10,6 +10,15 @@ done
 SCRIPTDIR="$( cd -P "$( dirname "${SOURCE}" )" && pwd )"
 SCRIPTDIR="${SCRIPTDIR%%/}"
 
+_echo() {
+    echo " + Hook: ${1}"
+}
+
+_exiterr() {
+    echo "Hook ERROR: ${1}" >&2
+    exit "${2:-1}"
+}
+
 function deploy_challenge {
     local DOMAIN="${1}" TOKEN_FILENAME="${2}" TOKEN_VALUE="${3}"
     local params='{"record_name":"_acme-challengeSUBDOMAIN","record_type":"TXT","record_data":"CHALLENGE","record_aux":"0","zone_host":"DOMAIN."}'
@@ -24,10 +33,17 @@ function deploy_challenge {
     params="${params/CHALLENGE/${TOKEN_VALUE}}"
     params="${params/DOMAIN/${SLD}}"
 
-    # send request
-    response="$("${SCRIPTDIR}"/kasapi.sh/kasapi.sh -f "add_dns_settings" -p "${params}")"
+    # send request and handle errors
+    _echo "Adding DNS entry for ${DOMAIN}..."
+    response="$("${SCRIPTDIR}"/kasapi.sh/kasapi.sh -f "add_dns_settings" -p "${params}" 2>&1)"
     exitval="${?}"
-    [[ "${exitval}" -eq 0 ]] && sleep 10
+    if [[ "${exitval}" -eq 0 ]]; then
+        _echo "DNS entry added successfully, waiting 10 seconds."
+        sleep 10
+    else
+        response="${response/ERROR: /}"
+        _exiterr "${response}" "${exitval}"
+    fi
     exit "${exitval}"
 }
 
@@ -42,9 +58,15 @@ function clean_challenge {
     get_params="${get_params/DOMAIN/${SLD}}"
 
     # send get request
-    response="$("${SCRIPTDIR}"/kasapi.sh/kasapi.sh -f "get_dns_settings" -p "${get_params}")"
+    _echo "Fetching DNS entry list for ${DOMAIN}..."
+    response="$("${SCRIPTDIR}"/kasapi.sh/kasapi.sh -f "get_dns_settings" -p "${get_params}" 2>&1)"
     exitval="${?}"
-    [[ "${exitval}" -ne 0 ]] && exit "${exitval}"
+    if [[ "${exitval}" -eq 0 ]]; then
+        _echo "DNS entry list fetched successfully."
+    else
+        response="${response/ERROR: /}"
+        _exiterr "${response}" "${exitval}"
+    fi
 
     # select all records starting with _acme-challenge
     local dns_entry_list="$(<<<"${response}" grep -oP '(<item xsi:type="ns2:Map">(?:(?!<item xsi:type="ns2:Map">).)*_acme-challenge(?:(?!<item xsi:type="ns2:Map">).)*)')"
@@ -52,6 +74,8 @@ function clean_challenge {
 
     # check if there are any _acme-challenge entries left to delete
     if [[ ${#dns_entries[@]} -ne 0 ]]; then
+        _echo "Deleting ${#dns_entries[@]} DNS entries..."
+
         # general delete parameters
         delete_params="${delete_params/DOMAIN/${SLD}}"
 
@@ -61,11 +85,18 @@ function clean_challenge {
             local params="${delete_params/ID/"$(<<<"${dns_entries[i]}" grep -oP '(?<=<key xsi:type="xsd:string">record_id</key><value xsi:type="xsd:string">)[^<]+')"}"
 
             # send delete request
-            response="$("${SCRIPTDIR}"/kasapi.sh/kasapi.sh -f "delete_dns_settings" -p "${params}")"
+            response="$("${SCRIPTDIR}"/kasapi.sh/kasapi.sh -f "delete_dns_settings" -p "${params}" 2>&1)"
             exitval="${?}"
-            [[ "${exitval}" -ne 0 ]] && exit "${exitval}"
+            if [[ "${exitval}" -eq 0 ]]; then
+                _echo "Successfully deleted DNS entry $(( ${i} + 1 ))/${#dns_entries[@]}."
+            else
+                response="${response/ERROR: /}"
+                _exiterr "${response}" "${exitval}"
+            fi
         done
     fi
+
+    exit 0
 }
 
 function deploy_cert {
@@ -79,8 +110,16 @@ function deploy_cert {
     params="${params/CHAIN/$(echo -n $(cat ${CHAINFILE} | sed 's / \\/ g' | sed ':a;N;$!ba;s/\n/\\n/g')\\n)}"
 
     # send request
-    response="$("${SCRIPTDIR}"/kasapi.sh/kasapi.sh -f "update_ssl" -p "${params}")"
-    exit "${?}"
+    _echo "Updating SSL certificate for ${DOMAIN}..."
+    response="$("${SCRIPTDIR}"/kasapi.sh/kasapi.sh -f "update_ssl" -p "${params}" 2>&1)"
+    exitval="${?}"
+    if [[ "${exitval}" -eq 0 ]]; then
+        _echo "Successfully updated SSL certificate."
+    else
+        response="${response/ERROR: /}"
+        _exiterr "${response}" "${exitval}"
+    fi
+    exit "${exitval}"
 }
 
 HANDLER=$1; shift; $HANDLER $@
