@@ -14,8 +14,8 @@ function deploy_challenge {
     local DOMAIN="${1}" TOKEN_FILENAME="${2}" TOKEN_VALUE="${3}"
     local params='{"record_name":"_acme-challengeSUBDOMAIN","record_type":"TXT","record_data":"CHALLENGE","record_aux":"0","zone_host":"DOMAIN."}'
 
-    # check if challenge is for second level domain or subdomain
-    SLD=$(<<<${DOMAIN} grep -oP '[^\.]+\.[^\.]+$')
+    # split domain in second level domain and subdomain
+    SLD=$(<<<"${DOMAIN}" grep -oP '[^\.]+\.[^\.]+$')
     SUBDOMAIN="${DOMAIN/${SLD}/}"
     [[ -n ${SUBDOMAIN} ]] && SUBDOMAIN=".${SUBDOMAIN%%.}"
 
@@ -24,7 +24,8 @@ function deploy_challenge {
     params="${params/CHALLENGE/${TOKEN_VALUE}}"
     params="${params/DOMAIN/${SLD}}"
 
-    response="$(${SCRIPTDIR}/kasapi.sh/kasapi.sh -f "add_dns_settings" -p "${params}")"
+    # send request
+    response="$("${SCRIPTDIR}"/kasapi.sh/kasapi.sh -f "add_dns_settings" -p "${params}")"
     exitval="${?}"
     [[ "${exitval}" -eq 0 ]] && sleep 10
     exit "${exitval}"
@@ -32,6 +33,39 @@ function deploy_challenge {
 
 function clean_challenge {
     local DOMAIN="${1}" TOKEN_FILENAME="${2}" TOKEN_VALUE="${3}"
+    local get_params='{"zone_host":"DOMAIN."}' delete_params='{"zone_host":"DOMAIN.","record_id":"ID"}'
+
+    # get second level domain from domain
+    SLD=$(<<<"${DOMAIN}" grep -oP '[^\.]+\.[^\.]+$')
+
+    # build get request parameters
+    get_params="${get_params/DOMAIN/${SLD}}"
+
+    # send get request
+    response="$("${SCRIPTDIR}"/kasapi.sh/kasapi.sh -f "get_dns_settings" -p "${get_params}")"
+    exitval="${?}"
+    [[ "${exitval}" -ne 0 ]] && exit "${exitval}"
+
+    # select all records starting with _acme-challenge
+    local dns_entry_list="$(<<<"${response}" grep -oP '(<item xsi:type="ns2:Map">(?:(?!<item xsi:type="ns2:Map">).)*_acme-challenge(?:(?!<item xsi:type="ns2:Map">).)*)')"
+    readarray dns_entries <<<"${dns_entry_list}"
+
+    # check if there are any _acme-challenge entries left to delete
+    if [[ ${#dns_entries[@]} -ne 0 ]]; then
+        # general delete parameters
+        delete_params="${delete_params/DOMAIN/${SLD}}"
+
+        # delete every _acme-challenge record
+        for ((i=0;i<${#dns_entries[@]};++i)); do
+            # build delete request for entry i
+            local params="${delete_params/ID/"$(<<<"${dns_entries[i]}" grep -oP '(?<=<key xsi:type="xsd:string">record_id</key><value xsi:type="xsd:string">)[^<]+')"}"
+
+            # send delete request
+            response="$("${SCRIPTDIR}"/kasapi.sh/kasapi.sh -f "delete_dns_settings" -p "${params}")"
+            exitval="${?}"
+            [[ "${exitval}" -ne 0 ]] && exit "${exitval}"
+        done
+    fi
 }
 
 function deploy_cert {
@@ -44,7 +78,8 @@ function deploy_cert {
     params="${params/CERT/$(echo -n $(cat ${CERTFILE} | sed 's / \\/ g' | sed ':a;N;$!ba;s/\n/\\n/g')\\n)}"
     params="${params/CHAIN/$(echo -n $(cat ${CHAINFILE} | sed 's / \\/ g' | sed ':a;N;$!ba;s/\n/\\n/g')\\n)}"
 
-    response="$(${SCRIPTDIR}/kasapi.sh/kasapi.sh -f "update_ssl" -p "${params}")"
+    # send request
+    response="$("${SCRIPTDIR}"/kasapi.sh/kasapi.sh -f "update_ssl" -p "${params}")"
     exit "${?}"
 }
 
