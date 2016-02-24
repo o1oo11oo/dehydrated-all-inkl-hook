@@ -38,8 +38,17 @@ function deploy_challenge {
     response="$("${SCRIPTDIR}"/kasapi.sh/kasapi.sh -f "add_dns_settings" -p "${params}" 2>&1)"
     exitval="${?}"
     if [[ "${exitval}" -eq 0 ]]; then
-        _echo "DNS entry added successfully, waiting 10 seconds."
-        sleep 10
+        if command -v dig >/dev/null; then
+            # use dig for propagation checking if dnsutils are installed to skip the delay if possible
+            _echo "DNS entry added successfully, waiting for propagation..."
+            while ! dig TXT +trace +noall +answer "_acme-challenge.${DOMAIN}" | grep -q "${TOKEN_VALUE}"; do
+                sleep 1
+            done
+        else
+            # fallback to static wait
+            _echo "DNS entry added successfully, waiting 10 seconds for propagation..."
+            sleep 10
+        fi
     else
         response="${response/ERROR: /}"
         _exiterr "${response}" "${exitval}"
