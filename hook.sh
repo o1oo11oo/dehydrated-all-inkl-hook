@@ -91,7 +91,7 @@ function clean_challenge {
         # delete every _acme-challenge record
         for ((i=0;i<${#dns_entries[@]};++i)); do
             # build delete request for entry i
-            local params="${delete_params/ID/"$(<<<"${dns_entries[i]}" grep -oP '(?<=<key xsi:type="xsd:string">record_id</key><value xsi:type="xsd:string">)[^<]+')"}"
+            local params="${delete_params/ID/$(<<<"${dns_entries[i]}" grep -oP '(?<=<key xsi:type="xsd:string">record_id</key><value xsi:type="xsd:string">)[^<]+')}"
 
             # send delete request
             response="$("${SCRIPTDIR}"/kasapi.sh/kasapi.sh -f "delete_dns_settings" -p "${params}" 2>&1)"
