@@ -114,9 +114,9 @@ function deploy_cert {
 
     # build request parameters
     params="${params/DOMAIN/${DOMAIN}}"
-    params="${params/PRIVKEY/$(printf "%s" "$(<"${KEYFILE}" | sed 's / \\/ g' | sed ':a;N;$!ba;s/\n/\\n/g')"\\n)}"
-    params="${params/CERT/$(printf "%s" "$(<"${CERTFILE}" | sed 's / \\/ g' | sed ':a;N;$!ba;s/\n/\\n/g')"\\n)}"
-    params="${params/CHAIN/$(printf "%s" "$(<"${CHAINFILE}" | sed 's / \\/ g' | sed ':a;N;$!ba;s/\n/\\n/g')"\\n)}"
+    params="${params/PRIVKEY/$(printf '%s\\n' "$(sed 's / \\/ g' "${KEYFILE}" | sed ':a;N;$!ba;s/\n/\\n/g')")}"
+    params="${params/CERT/$(printf '%s\\n' "$(sed 's / \\/ g' "${CERTFILE}" | sed ':a;N;$!ba;s/\n/\\n/g')")}"
+    params="${params/CHAIN/$(printf '%s\\n' "$(sed 's / \\/ g' "${CHAINFILE}" | sed ':a;N;$!ba;s/\n/\\n/g')")}"
 
     # send request
     _echo "Updating SSL certificate for ${DOMAIN}..."
