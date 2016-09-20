@@ -110,25 +110,7 @@ function clean_challenge {
 
 function deploy_cert {
     local DOMAIN="${1}" KEYFILE="${2}" CERTFILE="${3}" FULLCHAINFILE="${4}" CHAINFILE="${5}"
-    local params='{"hostname":"DOMAIN","ssl_certificate_is_active":"Y","ssl_certificate_sni_key":"PRIVKEY","ssl_certificate_sni_crt":"CERT","ssl_certificate_sni_bundle":"CHAIN"}'
-
-    # build request parameters
-    params="${params/DOMAIN/${DOMAIN}}"
-    params="${params/PRIVKEY/$(printf '%s\\n' "$(sed 's / \\/ g' "${KEYFILE}" | sed ':a;N;$!ba;s/\n/\\n/g')")}"
-    params="${params/CERT/$(printf '%s\\n' "$(sed 's / \\/ g' "${CERTFILE}" | sed ':a;N;$!ba;s/\n/\\n/g')")}"
-    params="${params/CHAIN/$(printf '%s\\n' "$(sed 's / \\/ g' "${CHAINFILE}" | sed ':a;N;$!ba;s/\n/\\n/g')")}"
-
-    # send request
-    _echo "Updating SSL certificate for ${DOMAIN}..."
-    response="$("${SCRIPTDIR}"/kasapi.sh/kasapi.sh -f "update_ssl" -p "${params}" 2>&1)"
-    exitval="${?}"
-    if [[ "${exitval}" -eq 0 ]]; then
-        _echo "Successfully updated SSL certificate."
-    else
-        response="${response/ERROR: /}"
-        _exiterr "${response}" "${exitval}"
-    fi
-    exit "${exitval}"
+    exit 0
 }
 
 function unchanged_cert {
