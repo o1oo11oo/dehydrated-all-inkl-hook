@@ -131,4 +131,9 @@ function deploy_cert {
     exit "${exitval}"
 }
 
-HANDLER=$1; shift; $HANDLER "${@}"
+function unchanged_cert {
+    local DOMAIN="${1}" KEYFILE="${2}" CERTFILE="${3}" FULLCHAINFILE="${4}" CHAINFILE="${5}"
+    exit 0
+}
+
+HANDLER=$1; shift; $HANDLER $@
