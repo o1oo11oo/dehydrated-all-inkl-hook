@@ -6,8 +6,11 @@ Using git: `git clone --recursive https://github.com/o1oo11oo/dehydrated-all-ink
 Updating the git repository: `git pull && git submodule update --init --recursive`  
 Without using git: [get the latest release](https://github.com/o1oo11oo/dehydrated-all-inkl-hook/releases/latest)
 
-## Usage
+## Usage/Setup
 Set your hook in your dehydrated config to `dehydrated-all-inkl-hook/hook.sh`, for example:
+
 ```Bash
 HOOK="${BASEDIR}/dehydrated-all-inkl-hook/hook.sh"
 ```
+
+See [kasapi.sh#setup](https://github.com/o1oo11oo/kasapi.sh#setup) for kasapi.sh setup.
