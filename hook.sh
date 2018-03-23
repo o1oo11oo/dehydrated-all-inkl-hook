@@ -118,17 +118,8 @@ function unchanged_cert {
     exit 0
 }
 
-function invalid_challenge() {
-    exit 0
-}
 
-function startup_hook() {
-    exit 0
-}
-
-function exit_hook() {
-    exit 0
-}
-
-
-HANDLER=$1; shift; $HANDLER $@
+HANDLER=$1; shift
+if [[ "${HANDLER}" =~ ^(deploy_challenge|clean_challenge|deploy_cert|unchanged_cert)$ ]]; then
+  "$HANDLER" "$@"
+fi
