@@ -79,7 +79,11 @@ function clean_challenge {
 
     # select all records starting with _acme-challenge
     local dns_entry_list="$(<<<"${response}" grep -oP '(<item xsi:type="ns2:Map">(?:(?!<item xsi:type="ns2:Map">).)*_acme-challenge(?:(?!<item xsi:type="ns2:Map">).)*)')"
-    readarray dns_entries <<<"${dns_entry_list}"
+    if [[ ! "${dns_entry_list}" =~ ^[[:space:]]*$ ]]; then
+        readarray dns_entries <<<"${dns_entry_list}"
+    else
+        dns_entries=()
+    fi
 
     # check if there are any _acme-challenge entries left to delete
     if [[ ${#dns_entries[@]} -ne 0 ]]; then
