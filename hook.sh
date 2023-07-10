@@ -68,7 +68,7 @@ function clean_challenge {
 
     # send get request
     _echo "Fetching DNS entry list for ${DOMAIN}..."
-    response="$("${SCRIPTDIR}"/kasapi.sh/kasapi.sh -f "get_dns_settings" -p "${get_params}" 2>&1)"
+    response="$("${SCRIPTDIR}"/kasapi.sh/kasapi.sh --session -f "get_dns_settings" -p "${get_params}" 2>&1)"
     exitval="${?}"
     if [[ "${exitval}" -eq 0 ]]; then
         _echo "DNS entry list fetched successfully."
@@ -98,7 +98,7 @@ function clean_challenge {
             local params="${delete_params/ID/$(<<<"${dns_entries[i]}" grep -oP '(?<=<key xsi:type="xsd:string">record_id</key><value xsi:type="xsd:string">)[^<]+')}"
 
             # send delete request
-            response="$("${SCRIPTDIR}"/kasapi.sh/kasapi.sh -f "delete_dns_settings" -p "${params}" 2>&1)"
+            response="$("${SCRIPTDIR}"/kasapi.sh/kasapi.sh --session -f "delete_dns_settings" -p "${params}" 2>&1)"
             exitval="${?}"
             if [[ "${exitval}" -eq 0 ]]; then
                 _echo "Successfully deleted DNS entry $(( i + 1 ))/${#dns_entries[@]}."
